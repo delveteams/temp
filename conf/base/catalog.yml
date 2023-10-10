@@ -1,0 +1,111 @@
+#  
+#   Define the data sources and their locations,
+#   intermediate data and their locations,
+#   and the final data and their locations. 
+#  
+
+SKUs: 
+  type: pandas.ExcelDataSet
+  filepath: data/01_raw/static/skus.xlsx
+  layer: raw
+
+all_SKU_shopify:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/static/template_sku.csv
+
+bergenInventoryNJ: 
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/BergenInventoryNJ.csv
+  layer: raw
+
+bergenInventoryPA: 
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/BergenInventoryPA.csv
+  layer: raw
+
+tplCenter:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/InventoryReportTPLC.csv
+  layer: raw
+
+inventoryTL:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/InventoryReportTL.csv
+  layer: raw
+
+retailQuota:
+  type: pandas.ExcelDataSet
+  filepath: data/01_raw/static/quota.xlsx
+  layer: raw
+  
+retialPrice:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/static/Bearaby_US_Historic_Costs.csv
+  layer: raw
+
+thinkLogistics_preprocessed:
+  type: pandas.CSVDataSet
+  filepath: data/02_intermediate/preprocessed_thinkLogistics.csv
+  layer: preprocessing
+
+bergenInventoryNJ_preprocessed:
+  type: pandas.ParquetDataSet
+  filepath: data/02_intermediate/preprocessed_bergenInventoryNJ.pq
+  layer: preprocessing
+
+bergenInventoryPA_preprocessed:
+  type: pandas.CSVDataSet
+  filepath: data/02_intermediate/preprocessed_bergenInventoryPA.csv
+  layer: preprocessing
+
+tplCenter_preprocessed:
+  type: pandas.ParquetDataSet
+  filepath: data/02_intermediate/preprocessed_threePLCenter.pq
+  layer: preprocessing
+
+retailQuota_preprocessed:
+  type: pandas.ParquetDataSet
+  filepath: data/02_intermediate/preprocessed_retailQuota.pq
+  layer: preprocessing
+
+merged_table:
+  type: pandas.ExcelDataSet
+  filepath: data/03_primary/merged_table.xlsx
+  layer: model_input
+
+metrics_table:
+  type: pandas.ExcelDataSet
+  filepath: data/03_primary/metrics_table.xlsx
+  layer: model_input
+
+
+experiment_metrics:
+  type: tracking.MetricsDataSet
+  filepath: data/09_tracking/experiment_metrics_table.json
+
+total_inventory:
+  type: pandas.CSVDataSet
+  filepath: data/03_primary/total_inventory.csv
+
+barplot_of_available_inventory_per_warehouse:
+  type: plotly.JSONDataSet
+  filepath: data/08_reporting/barplot_of_available_inventory_per_warehouse.json
+  layer: visualization
+ 
+quota_barplot:
+  type: plotly.JSONDataSet
+  filepath: data/08_reporting/quota_barplot.json
+  layer: visualization
+
+final_SKU_table:
+  type: pandas.ExcelDataSet
+  filepath: data/03_primary/final_SKU_table.xlsx
+  layer: model_input
+  
+ 
+ 
+stacked_barplot_for_sku:
+  type: plotly.JSONDataSet
+  filepath: data/08_reporting/stacked_barplot_for_sku.json  
+  layer: visualization
+
