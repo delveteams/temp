@@ -93,6 +93,7 @@ def preprocess_tplCenter(tplCenter: pd.DataFrame, sku_preprocessed) -> pd.DataFr
     merge = pd.merge(tplCenter, sku_preprocessed[['SKU', 'UPC']], on='SKU', how='left')
     # rename upc to UPCCODE
     merge.rename(columns={"UPC": "UPCCODE"}, inplace=True)
+ 
     
     # rename onhand to ACTUALQTY
     merge.rename(columns={"onHand": "ACTUALQTY"}, inplace=True)
@@ -186,6 +187,8 @@ def merge_tables(inventoryNJ_preprocessed:pd.DataFrame, inventoryPA_preprocessed
     
     merged = pd.concat([inventoryNJ_preprocessed, inventoryPA_preprocessed, tplCenter_preprocessed, thinkLogistics])
    
+    # change upc to str
+    merged["UPCCODE"] = merged["UPCCODE"].astype(str)
     # set the upccode to not have decimal points in merged
     merged["UPCCODE"] = merged["UPCCODE"].apply(lambda x: x.split(".")[0])
     
