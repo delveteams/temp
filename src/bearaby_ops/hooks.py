@@ -196,6 +196,30 @@ class APIAccessHooks:
             # remove the rows with oldest date
             df3 = df3[df3['Date'] != oldest_date]
             
+        # get the sum of "Total Available" for last 2 days
+        total = df3.copy()
+        total = total.groupby(['Date']).sum(numeric_only=True)
+        total = total.reset_index()
+        total = total.tail(2)
+        # get difference between the 2 days
+        difference = total["Total Available"].iloc[0] - total["Total Available"].iloc[1]
+        
+        if abs(difference) >= 500:
+             
+            # send slack message
+            slack_text = f"Inventory diff is greater than 500 from yesterday. Date: {datetime.datetime.now().strftime('%m/%d/%Y')}."
+            slack_message = {"text": slack_text}
+            slack_message = json.dumps(slack_message)
+            slack_message = slack_message.encode('utf-8')
+            slack_url = os.getenv("SLACK_URL")
+            slack_url = slack_url.encode('utf-8')
+            
+            slack_headers = {'Content-type': 'application/json'}
+            
+            
+            slack_response = requests.post(slack_url, data=slack_message, headers=slack_headers)
+            print(slack_response)
+            
          
         # save it as excel 
         df3.to_excel(project_url+r'\data\03_primary\total_inventory.xlsx', index=False)
