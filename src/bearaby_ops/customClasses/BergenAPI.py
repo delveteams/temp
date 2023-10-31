@@ -94,9 +94,6 @@ class BergenAPI:
                 if (actual_quantity == '0' and pending_quantity == '0'):
                     continue
 
-                # Write the row to CSV
-                                # 'WAREHOUSENAME', 'STYLE', 'COLOR', 'SIZE', 'DESCRIPTION', 'UPCCODE', 'ACTUALQTY', 'PENDINGPICKING', 'AVAILABLE', 'SKU', 'ACCOUNTNAME', 'SEASON'
-                
                 csv_writer.writerow([
                     warehouse, style, color, size, description, upc, actual_quantity, pending_quantity, available, sku 
                 ])

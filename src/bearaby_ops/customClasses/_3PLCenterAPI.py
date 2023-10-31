@@ -139,7 +139,7 @@ class _3PLCenterAPI:
             The filename to save the CSV file to, by default 
         """
         all_inventory_data = self._get_inventory_data()
-        fieldnames = ['SKU', 'TOTAL_RECEIVED', 'ALLOCATED', 'AVAILABLE', 'onHold', 'onHand']
+        fieldnames = ['SKU', 'TOTAL_RECEIVED', 'ALLOCATED', 'AVAILABLE', 'onHold', 'onHand', 'facilityId']
         filename = os.path.join(os.getcwd(), filename)
         with open(filename, 'w', newline='') as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -151,12 +151,14 @@ class _3PLCenterAPI:
                 available = api_output['available']
                 onHold = api_output['onHold']
                 onHand = api_output['onHand']
+                facilityId = api_output['facilityId']
                 writer.writerow({
                     'SKU': sku,
                     'TOTAL_RECEIVED': totalReceived,
                     'ALLOCATED': allocated,
                     'AVAILABLE': available,
                     'onHold': onHold,
-                    'onHand': onHand
+                    'onHand': onHand,
+                    'facilityId': facilityId
                 })
 

@@ -89,7 +89,7 @@ def preprocess_tplCenter(tplCenter: pd.DataFrame, sku_preprocessed) -> pd.DataFr
         pd.DataFrame: dataframe
     """
     tplCenter.columns = tplCenter.columns.str.strip()
-    tplCenter["WAREHOUSEID"] = "3PLC"
+    tplCenter["WAREHOUSEID"] = "3PLC NJ"
     merge = pd.merge(tplCenter, sku_preprocessed[['SKU', 'UPC']], on='SKU', how='left')
     # rename upc to UPCCODE
     merge.rename(columns={"UPC": "UPCCODE"}, inplace=True)
@@ -100,6 +100,9 @@ def preprocess_tplCenter(tplCenter: pd.DataFrame, sku_preprocessed) -> pd.DataFr
     
     # add column pendingpicking and fill it with actualqty - available
     merge["PENDINGPICKING"] = merge["ACTUALQTY"] - merge["AVAILABLE"]
+    
+    # if facilityId == 659 then WAREHOUSEID = 3PLC CA
+    merge["WAREHOUSEID"] = merge["WAREHOUSEID"].apply(lambda x: "3PLC CA" if x == 659 else x)
     
     
     return merge[[ "WAREHOUSEID", "SKU", "AVAILABLE", "UPCCODE", "ACTUALQTY", "PENDINGPICKING"]]
