@@ -25,7 +25,7 @@ class GoogleSheetUpdater:
             'https://www.googleapis.com/auth/drive',
             'https://www.googleapis.com/auth/drive.file'
         ]
-        file_name = r'src\bearaby_ops\service_account.json'
+        file_name = r'src/bearaby_ops/service_account.json'
         self.creds = ServiceAccountCredentials.from_json_keyfile_name(file_name, scope)
         self.client = gspread.authorize(self.creds)
 

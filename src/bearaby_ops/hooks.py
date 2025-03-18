@@ -5,6 +5,7 @@ import base64
 import csv
 import json
 import requests
+import logging
 import xml.etree.ElementTree as ET
 from urllib.parse import quote_plus
  
@@ -28,12 +29,12 @@ dotenv.load_dotenv()
 import sys
 
 project_url = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(r"src\bearaby_ops")
+sys.path.append("src/bearaby_ops")
 
-from customClasses.BergenAPI import BergenAPI
-from customClasses.ThinkLogisticsAPI import ThinkLogisticsAPI
-from customClasses._3PLCenterAPI import _3PLCenterAPI
-from customClasses.GoogleSheetUpdater import GoogleSheetUpdater
+from .customClasses.BergenAPI import BergenAPI
+from .customClasses.ThinkLogisticsAPI import ThinkLogisticsAPI
+from .customClasses._3PLCenterAPI import _3PLCenterAPI
+from .customClasses.GoogleSheetUpdater import GoogleSheetUpdater
 
 
 # If modifying these scopes, delete the file token.json.
@@ -44,24 +45,24 @@ class APIAccessHooks:
     @staticmethod
     @hook_impl
     def after_catalog_created(  ) -> None:
-        print("Downloading inventory data from the Bergen API...")
+        logging.info("Downloading inventory data from the Bergen API...")
         # Loop through credentials and fetch/write data
-        credentials_list = [(os.getenv("USER_NJ_EMAIL"), os.getenv("USER_NJ_USERNAME"),os.getenv("USER_NJ_PASSWORD"), "\BergenInventoryNJ.csv"), (os.getenv("USER_PA_EMAIL"), os.getenv("USER_PA_USERNAME"),os.getenv("USER_PA_PASSWORD"), "\BergenInventoryPA.csv")]
+        credentials_list = [(os.getenv("USER_NJ_EMAIL"), os.getenv("USER_NJ_USERNAME"),os.getenv("USER_NJ_PASSWORD"), "/BergenInventoryNJ.csv"), (os.getenv("USER_PA_EMAIL"), os.getenv("USER_PA_USERNAME"),os.getenv("USER_PA_PASSWORD"), "/BergenInventoryPA.csv")]
         for creds in credentials_list:
             web_address, username, password, fileName = creds
             rex_api = BergenAPI(web_address, username, password)
             authentication_token = rex_api.get_authentication_token()
 
             if authentication_token:
-                print("Authentication token:", authentication_token)
+                logging.info("Authentication token:", authentication_token)
                 inventory = rex_api.get_inventory()
                 if inventory:
-                    csv_filename = project_url + r"\data\01_raw" + fileName
+                    csv_filename = project_url + r"/data/01_raw" + fileName
                     
                     rex_api.write_inventory_to_csv(inventory, csv_filename)
                     
         
-        print("Downloading inventory data from the 3PL Center API...")            
+        logging.info("Downloading inventory data from the 3PL Center API...")            
     
         client_id = os.getenv("TPL_CLIENT_ID")
         client_secret = os.getenv("TPL_CLIENT_SECRET")
@@ -77,14 +78,14 @@ class APIAccessHooks:
         inventory_data = api.retrieve_inventory()
 
         if inventory_data:
-            api.save_inventory_to_excel(inventory_data, project_url + r"\data\01_raw\InventoryReportTL.csv")
+            api.save_inventory_to_excel(inventory_data, project_url + r"/data/01_raw/InventoryReportTL.csv")
                         
     
     @staticmethod
     @hook_impl
     def after_pipeline_run(  ) -> None:
-        fileInfo = [(project_url + r"\data\01_raw\BergenInventoryNJ.csv", "BergenInventoryNJ", os.getenv("SHEETS_ID_BERGEN_NJ")),( project_url+ r"\data\01_raw\BergenInventoryPA.csv","BergenInventoryPA", os.getenv("SHEETS_ID_BERGEN_PA")), (project_url + r"\data\03_primary\final_SKU_table.xlsx","",os.getenv("SHEETS_ID_DAILY_INVENTORY")), (project_url + r"\data\01_raw\InventoryReportTPLC.csv", "3PLCenter", os.getenv("SHEETS_ID_TPLC")),(project_url + r"\data\01_raw\InventoryReportTL.csv", "InventoryReportTL", os.getenv("SHEETS_ID_THINK_LOGISTICS")) ]
-        print("Pipeline has run successfully! Uploading the file to the drive...")
+        fileInfo = [(project_url + r"/data/01_raw/BergenInventoryNJ.csv", "BergenInventoryNJ", os.getenv("SHEETS_ID_BERGEN_NJ")),( project_url+ r"/data/01_raw/BergenInventoryPA.csv","BergenInventoryPA", os.getenv("SHEETS_ID_BERGEN_PA")), (project_url + r"/data/03_primary/final_SKU_table.xlsx","",os.getenv("SHEETS_ID_DAILY_INVENTORY")), (project_url + r"/data/01_raw/InventoryReportTPLC.csv", "3PLCenter", os.getenv("SHEETS_ID_TPLC")),(project_url + r"/data/01_raw/InventoryReportTL.csv", "InventoryReportTL", os.getenv("SHEETS_ID_THINK_LOGISTICS")) ]
+        logging.info("Pipeline has run successfully! Uploading the file to the drive...")
         
         for info in fileInfo:
             filenamePath, filename, folderLocation = info
@@ -100,7 +101,7 @@ class APIAccessHooks:
                     creds.refresh(Request())
                 else:
                     flow = InstalledAppFlow.from_client_secrets_file(
-                        project_url+ r'\src\bearaby_ops\credentials.json', SCOPES)
+                        project_url+ r'/src/bearaby_ops/credentials.json', SCOPES)
                     creds = flow.run_local_server(port=0)
                 # Save the credentials for the next run
                 with open('token.json', 'w') as token:
@@ -161,36 +162,36 @@ class APIAccessHooks:
                     uploaded_file = service.files().create(
                         body=csv_file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
 
-                print('CSV file uploaded. File ID: %s' % uploaded_file.get('id'))
+                logging.info('CSV file uploaded. File ID: %s' % uploaded_file.get('id'))
 
             except HttpError as error:
-                print(f'An error occurred: {error}')
+                logging.info(f'An error occurred: {error}')
                 
             
         file_to_edit = (
-            project_url + r"\data\03_primary\final_SKU_table.xlsx",
+            project_url + r"/data/03_primary/final_SKU_table.xlsx",
             "display",
             os.getenv("SHEETS_LOOKER_DISPLAY")
         )
             
 
         token_file = 'token_.json'
-        credentials_file = project_url+r'\src\bearaby_ops\credentials.json'
+        credentials_file = project_url+r'/src/bearaby_ops/credentials.json'
 
         updater = GoogleSheetUpdater(file_to_edit, token_file, credentials_file)
         updater.update_sheet(sheet_name='Sheet1', update_range='A1')
         
-        updater.download_sheet('total_inventory',  os.getenv("SHEETS_TIME_SERIES"), project_url+r'\data\02_intermediate\test.csv')
+        updater.download_sheet('total_inventory',  os.getenv("SHEETS_TIME_SERIES"), project_url+r'/data/02_intermediate/test.csv')
         
         # open the file and read the data as dataframe
-        df = pd.read_csv(project_url+r'\data\02_intermediate\test.csv')
-        df2 = pd.read_csv(project_url+r'\data\03_primary\total_inventory.csv')
+        df = pd.read_csv(project_url+r'/data/02_intermediate/test.csv')
+        df2 = pd.read_csv(project_url+r'/data/03_primary/total_inventory.csv')
         
         # concat the dataframes
         df3 = pd.concat([df, df2])
         
         # check the number of unique elments Date column and if len > 30 remove the oldest date 
-        if len(df3['Date'].unique()) > 30:
+        while len(df3['Date'].unique()) > 31:
             # oldest date
             oldest_date = df3['Date'].unique()[0]
             # remove the rows with oldest date
@@ -198,16 +199,21 @@ class APIAccessHooks:
             
         # get the sum of "Total Available" for last 2 days
         total = df3.copy()
+        total["Date"] = pd.to_datetime(total["Date"]).dt.date
         total = total.groupby(['Date']).sum(numeric_only=True)
+        # sort by the date
+        total = total.sort_values(by=['Date'])
         total = total.reset_index()
         total = total.tail(2)
         # get difference between the 2 days
-        difference = total["Total Available"].iloc[0] - total["Total Available"].iloc[1]
+        difference =  total["Total Available"].iloc[1] - total["Total Available"].iloc[0] 
+        logging.info(total)
+        logging.info(total["Total Available"].iloc[1], total["Total Available"].iloc[0] , difference)
         
         if abs(difference) >= 500:
              
             # send slack message
-            slack_text = f"Inventory diff is greater than 500 from yesterday. Date: {datetime.datetime.now().strftime('%m/%d/%Y')}."
+            slack_text = f"Inventory diff is {difference} from yesterday. Date: {datetime.datetime.now().strftime('%m/%d/%Y')}."
             slack_message = {"text": slack_text}
             slack_message = json.dumps(slack_message)
             slack_message = slack_message.encode('utf-8')
@@ -218,20 +224,18 @@ class APIAccessHooks:
             
             
             slack_response = requests.post(slack_url, data=slack_message, headers=slack_headers)
-            print(slack_response)
+            logging.info(slack_response)
+            
             
          
         # save it as excel 
-        df3.to_excel(project_url+r'\data\03_primary\total_inventory.xlsx', index=False)
+        df3.to_excel(project_url+r'/data/03_primary/total_inventory.xlsx', index=False)
        
         file_to_edit_ = (
-            project_url+r'\data\03_primary\total_inventory.xlsx',
+            project_url+r'/data/03_primary/total_inventory.xlsx',
             "new",
             os.getenv("SHEETS_TIME_SERIES")
         )
         update_timeseries = GoogleSheetUpdater(file_to_edit_, token_file, credentials_file)
         update_timeseries.update_sheet(sheet_name='total_inventory', update_range='A1')
         
-        
-        
-                        

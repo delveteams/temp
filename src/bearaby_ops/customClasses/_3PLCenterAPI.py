@@ -129,7 +129,7 @@ class _3PLCenterAPI:
                 break
         return all_inventory_data
 
-    def save_inventory_data_to_csv(self, filename=r'data\01_raw\InventoryReportTPLC.csv'):
+    def save_inventory_data_to_csv(self, filename=r'data/01_raw/InventoryReportTPLC.csv'):
         """
         Saves the inventory data to a CSV file.
 

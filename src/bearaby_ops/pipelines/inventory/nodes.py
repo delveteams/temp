@@ -22,7 +22,7 @@ def preprocess_bergenInventory_products(inventory: pd.DataFrame) -> pd.DataFrame
     """
     
     inventory.dropna(subset=["UPCCODE"], inplace=True)
-    warehouse_mapping = {"Bergen Logistics NJ299": "BLNJ", "Bergen Logistics PA1055": "BLPA"}
+    warehouse_mapping = {"Bergen Logistics NJ299": "BLNJ"}
     inventory["WAREHOUSEID"] = inventory["WAREHOUSENAME"].map(warehouse_mapping)    
     # if the sku is null then fill it
     inventory["SKU"] = inventory["SKU"].fillna("Missing_SKU_")  
@@ -89,7 +89,7 @@ def preprocess_tplCenter(tplCenter: pd.DataFrame, sku_preprocessed) -> pd.DataFr
         pd.DataFrame: dataframe
     """
     tplCenter.columns = tplCenter.columns.str.strip()
-    tplCenter["WAREHOUSEID"] = "3PLC NJ"
+     
     merge = pd.merge(tplCenter, sku_preprocessed[['SKU', 'UPC']], on='SKU', how='left')
     # rename upc to UPCCODE
     merge.rename(columns={"UPC": "UPCCODE"}, inplace=True)
@@ -97,12 +97,10 @@ def preprocess_tplCenter(tplCenter: pd.DataFrame, sku_preprocessed) -> pd.DataFr
     
     # rename onhand to ACTUALQTY
     merge.rename(columns={"onHand": "ACTUALQTY"}, inplace=True)
-    
-    # add column pendingpicking and fill it with actualqty - available
     merge["PENDINGPICKING"] = merge["ACTUALQTY"] - merge["AVAILABLE"]
     
-    # if facilityId == 659 then WAREHOUSEID = 3PLC CA
-    merge["WAREHOUSEID"] = merge["WAREHOUSEID"].apply(lambda x: "3PLC CA" if x == 659 else x)
+    merge["WAREHOUSEID"] = merge["facilityId"].apply(lambda x: "3PLC LA" if x == 659 else "3PLC NJ")
+    # merge["WAREHOUSEID"] = merge["facilityId"].apply(lambda x: "3PLC LA" if x == 659 else "3PLC NJ")
     
     
     return merge[[ "WAREHOUSEID", "SKU", "AVAILABLE", "UPCCODE", "ACTUALQTY", "PENDINGPICKING"]]
@@ -173,12 +171,11 @@ def preprocess_quota(quota: pd.DataFrame) -> pd.DataFrame:
 #     return merged_inventory[["SKU", "AVAILABLE", "UPCCODE", "WAREHOUSEID", "Collection"]]
 
 
-def merge_tables(inventoryNJ_preprocessed:pd.DataFrame, inventoryPA_preprocessed: pd.DataFrame, tplCenter_preprocessed: pd.DataFrame, thinkLogistics: pd.DataFrame) -> pd.DataFrame:
+def merge_tables(inventoryNJ_preprocessed:pd.DataFrame, tplCenter_preprocessed: pd.DataFrame, thinkLogistics: pd.DataFrame) -> pd.DataFrame:
     """ Create Model Input Table
     
     Args:
         inventoryNJ_preprocessed: Bergen County Inventory Data
-        inventoryPA_preprocessed: Bergen County Inventory Data
         tplCenter_preprocessed: Bergen County Inventory Data
     Returns:
         
@@ -188,7 +185,7 @@ def merge_tables(inventoryNJ_preprocessed:pd.DataFrame, inventoryPA_preprocessed
     tplCenter_preprocessed["UPCCODE"] = tplCenter_preprocessed["UPCCODE"].astype(str)
     thinkLogistics["UPCCODE"] = thinkLogistics["UPCCODE"].astype(str)
     
-    merged = pd.concat([inventoryNJ_preprocessed, inventoryPA_preprocessed, tplCenter_preprocessed, thinkLogistics])
+    merged = pd.concat([inventoryNJ_preprocessed, tplCenter_preprocessed, thinkLogistics])
    
     # change upc to str
     merged["UPCCODE"] = merged["UPCCODE"].astype(str)
@@ -228,14 +225,14 @@ def metrics(merged_data_: pd.DataFrame, retailQuot: pd.DataFrame, all_SKU_shopif
 
     
     # set the warehouse with the highest inventory as the warehouse to fulfill the order, incase of tie, choose in the following order:  BLNJ, BLPA, TPLC, SMC
-    merged_data["Warehouse"] = merged_data[["BLNJ", "BLPA", "3PLC"]].idxmax(axis=1)
+    merged_data["Warehouse"] = merged_data[["BLNJ", "3PLC NJ","3PLC LA"]].idxmax(axis=1)
     
     # add 4 columns to the merged_data dataframe: "Updated_BLNJ", "Updated_BLPA", "Updated_TPLC", "Updated_SMC"
     # based on the Warehouse column, if the warehouse is the same as the column name, then subtract the Quota Amount from the inventory 
     # else keep the inventory the same
     merged_data["Updated_BLNJ"] = merged_data.apply(lambda x: x["BLNJ"] - x["Quota Amount"] if x["Warehouse"] == "BLNJ" else x["BLNJ"], axis=1)
-    merged_data["Updated_BLPA"] = merged_data.apply(lambda x: x["BLPA"] - x["Quota Amount"] if x["Warehouse"] == "BLPA" else x["BLPA"], axis=1)
-    merged_data["Updated_3PLC"] = merged_data.apply(lambda x: x["3PLC"] - x["Quota Amount"] if x["Warehouse"] == "3PLC" else x["3PLC"], axis=1)
+    merged_data["Updated_3PLC NJ"] = merged_data.apply(lambda x: x["3PLC NJ"] - x["Quota Amount"] if x["Warehouse"] == "3PLC NJ" else x["3PLC NJ"], axis=1)
+    merged_data["Updated_3PLC LA"] = merged_data.apply(lambda x: x["3PLC LA"] - x["Quota Amount"] if x["Warehouse"] == "3PLC LA" else x["3PLC LA"], axis=1)
     merged_data["Updated_THINKLOGISTICS"] = merged_data.apply(lambda x: x["THINKLOGISTICS"] - x["Quota Amount"] if x["Warehouse"] == "THINKLOGISTICS" else x["THINKLOGISTICS"], axis=1)
     
       
@@ -245,8 +242,8 @@ def metrics(merged_data_: pd.DataFrame, retailQuot: pd.DataFrame, all_SKU_shopif
     merged_data['UPC'] = merged_data[['UPCCODE_x', 'UPCCODE_y']].apply(lambda row: row.dropna().iloc[0], axis=1)
     merged_data.drop(['UPCCODE_x', 'UPCCODE_y'], axis=1, inplace=True)
     
-    merged_data["Total Inventory"] = merged_data["BLPA"] + merged_data["BLNJ"] + merged_data["3PLC"] + merged_data["THINKLOGISTICS"]
-    merged_data["Total Available"] = merged_data["Updated_BLPA"] + merged_data["Updated_3PLC"] + merged_data["Updated_BLNJ"] + merged_data["THINKLOGISTICS"]
+    merged_data["Total Inventory"] =merged_data["BLNJ"] + merged_data["3PLC NJ"] + merged_data["3PLC LA"] + merged_data["THINKLOGISTICS"]
+    merged_data["Total Available"] =merged_data["Updated_3PLC NJ"] + merged_data["Updated_BLNJ"]  + merged_data["Updated_3PLC LA"] + merged_data["THINKLOGISTICS"]
     
 
     merged_data.fillna(0, inplace=True)
@@ -273,7 +270,7 @@ def add_product_name_SKU(merged_data: pd.DataFrame, skus: pd.DataFrame, retialPr
     merged_data = pd.merge(merged_data, skus, on="SKU", how="left")
     merged_data = pd.merge(merged_data, retialPrice, on="SKU", how="left") 
     merged_data.fillna(0, inplace=True)
-    return merged_data[["SKU", "UPC","Color", "Size (Inch)", "Weight (lbs)", "Product Description","Collection", "BLNJ", "BLPA", "3PLC","THINKLOGISTICS",  "Quota", "Total Inventory", "Quota Amount", "Warehouse", "Updated_BLNJ", "Updated_BLPA", "Updated_3PLC","Updated_THINKLOGISTICS",  "Total Available", "Cost"]]
+    return merged_data[["SKU", "UPC","Color", "Size (Inch)", "Weight (lbs)", "Product Description","Collection", "BLNJ", "3PLC LA","3PLC NJ","THINKLOGISTICS",  "Quota", "Total Inventory", "Quota Amount", "Warehouse", "Updated_BLNJ", "Updated_3PLC LA","Updated_3PLC NJ","Updated_THINKLOGISTICS",  "Total Available", "Cost"]]
 
 def total_inventory(final_SKU_table: pd.DataFrame) -> pd.DataFrame:
     # deep copy the final_SKU_table
@@ -313,7 +310,7 @@ def quota_barplot(merged_data: pd.DataFrame, skus) ->plt:
     """Create a bar plot of the total quota for each SKU
     Args:
         experiment_metrics : merged_data
-        SKU,BLNJ,BLPA,SMC,TPLC,Quota,Total Inventory,Quota Amount,Warehouse
+        SKU,BLNJ,SMC,TPLC,Quota,Total Inventory,Quota Amount,Warehouse
 
         
     Returns:
@@ -339,7 +336,7 @@ def SKU_barplot(final_SKU_table: pd.DataFrame) ->plt:
     """Create a bar plot of the total quota for each SKU
     Args:
         experiment_metrics : merged_data
-        SKU,BLNJ,BLPA,SMC,TPLC,Quota,Total Inventory,Quota Amount,Warehouse
+        SKU,BLNJ,SMC,TPLC,Quota,Total Inventory,Quota Amount,Warehouse
 
         
     Returns:
@@ -367,7 +364,7 @@ def SKU_PA_barplot(final_SKU_table: pd.DataFrame) ->plt:
     """Create a bar plot of the total quota for each SKU
     Args:
         experiment_metrics : merged_data
-        SKU,BLNJ,BLPA,SMC,TPLC,Quota,Total Inventory,Quota Amount,Warehouse
+        SKU,BLNJ,SMC,TPLC,Quota,Total Inventory,Quota Amount,Warehouse
 
         
     Returns:
