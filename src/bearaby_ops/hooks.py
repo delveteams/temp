@@ -1,29 +1,18 @@
 import datetime
+import json
+import logging
+import os
+
+import dotenv
 import pandas as pd
 import requests
-import base64
-import csv
-import json
-import requests
-import logging
-import xml.etree.ElementTree as ET
-from urllib.parse import quote_plus
- 
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
-from googleapiclient.http import MediaIoBaseDownload
-
 from kedro.framework.hooks import hook_impl
-
-import dotenv
-import os
 
 dotenv.load_dotenv()
 import sys
@@ -47,9 +36,19 @@ class APIAccessHooks:
     def after_catalog_created(  ) -> None:
         logging.info("Downloading inventory data from the Bergen API...")
         # Loop through credentials and fetch/write data
-        credentials_list = [(os.getenv("USER_NJ_EMAIL"), os.getenv("USER_NJ_USERNAME"),os.getenv("USER_NJ_PASSWORD"), "/BergenInventoryNJ.csv"), (os.getenv("USER_PA_EMAIL"), os.getenv("USER_PA_USERNAME"),os.getenv("USER_PA_PASSWORD"), "/BergenInventoryPA.csv")]
+        credentials_list = [(
+            os.getenv("USER_NJ_EMAIL"),
+            os.getenv("USER_NJ_USERNAME"),
+            os.getenv("USER_NJ_PASSWORD"),
+            "/BergenInventoryNJ.csv"
+        ), (
+            os.getenv("USER_PA_EMAIL"),
+            os.getenv("USER_PA_USERNAME"),
+            os.getenv("USER_PA_PASSWORD"),
+            "/BergenInventoryPA.csv"
+        )]
         for creds in credentials_list:
-            web_address, username, password, fileName = creds
+            web_address, username, password, file_name = creds
             rex_api = BergenAPI(web_address, username, password)
             authentication_token = rex_api.get_authentication_token()
 
@@ -57,7 +56,7 @@ class APIAccessHooks:
                 logging.info("Authentication token:", authentication_token)
                 inventory = rex_api.get_inventory()
                 if inventory:
-                    csv_filename = project_url + r"/data/01_raw" + fileName
+                    csv_filename = project_url + r"/data/01_raw" + file_name
                     
                     rex_api.write_inventory_to_csv(inventory, csv_filename)
                     
@@ -83,12 +82,31 @@ class APIAccessHooks:
     
     @staticmethod
     @hook_impl
-    def after_pipeline_run(  ) -> None:
-        fileInfo = [(project_url + r"/data/01_raw/BergenInventoryNJ.csv", "BergenInventoryNJ", os.getenv("SHEETS_ID_BERGEN_NJ")),( project_url+ r"/data/01_raw/BergenInventoryPA.csv","BergenInventoryPA", os.getenv("SHEETS_ID_BERGEN_PA")), (project_url + r"/data/03_primary/final_SKU_table.xlsx","",os.getenv("SHEETS_ID_DAILY_INVENTORY")), (project_url + r"/data/01_raw/InventoryReportTPLC.csv", "3PLCenter", os.getenv("SHEETS_ID_TPLC")),(project_url + r"/data/01_raw/InventoryReportTL.csv", "InventoryReportTL", os.getenv("SHEETS_ID_THINK_LOGISTICS")) ]
+    def after_pipeline_run() -> None:
+        file_info = [(
+            project_url + r"/data/01_raw/BergenInventoryNJ.csv",
+            "BergenInventoryNJ",
+            os.getenv("SHEETS_ID_BERGEN_NJ")
+        ), (
+            project_url + r"/data/01_raw/BergenInventoryPA.csv",
+            "BergenInventoryPA",
+            os.getenv("SHEETS_ID_BERGEN_PA")
+        ), (
+            project_url + r"/data/03_primary/final_SKU_table.xlsx",
+            "",os.getenv("SHEETS_ID_DAILY_INVENTORY")
+        ), (
+            project_url + r"/data/01_raw/InventoryReportTPLC.csv",
+            "3PLCenter",
+            os.getenv("SHEETS_ID_TPLC")
+        ),(
+            project_url + r"/data/01_raw/InventoryReportTL.csv",
+            "InventoryReportTL",
+            os.getenv("SHEETS_ID_THINK_LOGISTICS")
+        )]
         logging.info("Pipeline has run successfully! Uploading the file to the drive...")
         
-        for info in fileInfo:
-            filenamePath, filename, folderLocation = info
+        for info in file_info:
+            filename_path, filename, folder_location = info
             creds = None
             # The file token.json stores the user's access and refresh tokens, and is
             # created automatically when the authorization flow completes for the first
@@ -100,8 +118,7 @@ class APIAccessHooks:
                 if creds and creds.expired and creds.refresh_token:
                     creds.refresh(Request())
                 else:
-                    flow = InstalledAppFlow.from_client_secrets_file(
-                        project_url+ r'/src/bearaby_ops/credentials.json', SCOPES)
+                    flow = InstalledAppFlow.from_client_secrets_file(project_url + r'/src/bearaby_ops/credentials.json', SCOPES)
                     creds = flow.run_local_server(port=0)
                 # Save the credentials for the next run
                 with open('token.json', 'w') as token:
@@ -122,24 +139,24 @@ class APIAccessHooks:
                 if filename == "":
                     # filename as mm-dd-yy.xlsx
                     csv_file_metadata = {
-                        'name' : formated_date+".xlsx",
-                        'parents': [folderLocation]
+                        'name' : formated_date + ".xlsx",
+                        'parents': [folder_location]
                     }
-                    media = MediaFileUpload(filenamePath, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                    media = MediaFileUpload(filename_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
                     
                 elif filename == "display":
                     csv_file_metadata = {
                         'name' : "display",
-                        'parents': [folderLocation]
+                        'parents': [folder_location]
                     }
-                    media = MediaFileUpload(filenamePath, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                    media = MediaFileUpload(filename_path, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
                 else:
                     csv_file_metadata = {
-                        'name': filename+date+".csv",  # Replace with desired file name
-                        'parents': [folderLocation]  # Upload to the specified folder
+                        'name': f'{filename}{date}.csv',
+                        'parents': [folder_location]
                     }
                     
-                    media = MediaFileUpload(filenamePath, mimetype='text/csv')
+                    media = MediaFileUpload(filename_path, mimetype='text/csv')
                     # uploaded_file = service.files().create(
                     # body=csv_file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
     
@@ -190,11 +207,11 @@ class APIAccessHooks:
         # concat the dataframes
         df3 = pd.concat([df, df2])
         
-        # check the number of unique elments Date column and if len > 30 remove the oldest date 
+        # check the number of unique elements Date column and if len > 30 remove the oldest date
         while len(df3['Date'].unique()) > 31:
             # oldest date
             oldest_date = df3['Date'].unique()[0]
-            # remove the rows with oldest date
+            # remove the rows with the oldest date
             df3 = df3[df3['Date'] != oldest_date]
             
         # get the sum of "Total Available" for last 2 days
@@ -212,7 +229,7 @@ class APIAccessHooks:
         
         if abs(difference) >= 500:
              
-            # send slack message
+            # send Slack message
             slack_text = f"Inventory diff is {difference} from yesterday. Date: {datetime.datetime.now().strftime('%m/%d/%Y')}."
             slack_message = {"text": slack_text}
             slack_message = json.dumps(slack_message)
@@ -238,4 +255,3 @@ class APIAccessHooks:
         )
         update_timeseries = GoogleSheetUpdater(file_to_edit_, token_file, credentials_file)
         update_timeseries.update_sheet(sheet_name='total_inventory', update_range='A1')
-        
