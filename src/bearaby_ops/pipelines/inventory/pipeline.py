@@ -1,7 +1,7 @@
 from kedro.pipeline import Pipeline, node, pipeline
 
 from .nodes import add_product_name_SKU, barplot_of_available_inventory_per_warehouse, experiment_metrics, \
-    merge_tables, metrics, preprocess_TL, preprocess_bergenInventory_products, preprocess_quota, preprocess_sku, \
+    merge_tables, metrics, preprocess_bergenInventory_products, preprocess_quota, preprocess_sku, \
     preprocess_tplCenter, quota_barplot, stacked_barplot, total_inventory
 
 
@@ -20,13 +20,6 @@ def create_pipeline(**kwargs) -> Pipeline:
             outputs="tplCenter_preprocessed",
             name="preprocess_tplCenter_node",
         ),
-         node(
-            func=preprocess_TL,
-            inputs=["inventoryTL", "SKUs_preprocessed"],
-            outputs="thinkLogistics_preprocessed",
-            name="preprocess_TL_node",
-        ),
-     
         node(
             func=preprocess_quota,
             inputs=["retailQuota"],
@@ -34,7 +27,6 @@ def create_pipeline(**kwargs) -> Pipeline:
             name="preprocess_quota_node",
             
         ),
-       
         node(
             func=preprocess_sku,
             inputs=["SKUs"],
@@ -43,7 +35,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
         node(
             func=merge_tables,
-            inputs=["bergenInventoryNJ_preprocessed", "tplCenter_preprocessed", "thinkLogistics_preprocessed"],
+            inputs=["bergenInventoryNJ_preprocessed", "tplCenter_preprocessed"],
             outputs="merged_table",
             name="merge_table_node",
         ),
@@ -75,7 +67,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
         node(
             func=add_product_name_SKU,
-            inputs=["metrics_table", "SKUs_preprocessed", "retialPrice"],
+            inputs=["metrics_table", "SKUs_preprocessed", "retailPrice"],
             outputs="final_SKU_table",
             name="add_product_name_SKU_node",
         ),

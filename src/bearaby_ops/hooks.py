@@ -21,7 +21,6 @@ project_url = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__
 sys.path.append("src/bearaby_ops")
 
 from .customClasses.BergenAPI import BergenAPI
-from .customClasses.ThinkLogisticsAPI import ThinkLogisticsAPI
 from .customClasses._3PLCenterAPI import _3PLCenterAPI
 from .customClasses.GoogleSheetUpdater import GoogleSheetUpdater
 
@@ -67,18 +66,7 @@ class APIAccessHooks:
 
         api = _3PLCenterAPI(client_id, client_secret)
         api.save_inventory_data_to_csv()
-        
-        
-        login =  os.getenv("THINK_LOGISTICS_LOGIN")
-        password = os.getenv("THINK_LOGISTICS_PASSWORD")
 
-        api = ThinkLogisticsAPI(login, password)
-        inventory_data = api.retrieve_inventory()
-
-        if inventory_data:
-            api.save_inventory_to_excel(inventory_data, project_url + r"/data/01_raw/InventoryReportTL.csv")
-                        
-    
     @staticmethod
     @hook_impl
     def after_pipeline_run() -> None:
@@ -94,10 +82,6 @@ class APIAccessHooks:
             project_url + r"/data/01_raw/InventoryReportTPLC.csv",
             "3PLCenter",
             os.getenv("SHEETS_ID_TPLC")
-        ),(
-            project_url + r"/data/01_raw/InventoryReportTL.csv",
-            "InventoryReportTL",
-            os.getenv("SHEETS_ID_THINK_LOGISTICS")
         )]
         logging.info("Pipeline has run successfully! Uploading the file to the drive...")
         

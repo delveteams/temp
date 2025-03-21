@@ -1,12 +1,9 @@
 import datetime
-import math
-import pandas as pd 
+
 import matplotlib.pyplot as plt
-import numpy as np
-import PIL
+import pandas as pd
 import plotly.express as px
-import seaborn as sn
-from plotly import graph_objects as go
+
 
 def preprocess_bergenInventory_products(inventory: pd.DataFrame) -> pd.DataFrame:
     
@@ -129,17 +126,6 @@ def preprocess_sku(SKUs: pd.DataFrame) -> pd.DataFrame:
     SKUs["UPC"] = SKUs["UPC"].astype(str)
     return SKUs
 
-# def add_upc_to_inventory(inventory: pd.DataFrame, sku: pd.DataFrame) -> pd.DataFrame:
-
-#     merged_inventory = pd.merge(inventory, sku[['SKU', 'UPC']], on='SKU', how='left')
-#       # change the Collection of UPC to str
-#     merged_inventory["UPC"] = merged_inventory["UPC"].astype(str)
-#     # remove the decimal point
-#     merged_inventory["UPC"] = merged_inventory["UPC"].apply(lambda x: x.split(".")[0])
-#     merged_inventory.rename(columns={"UPC": "UPCCODE"}, inplace=True)
-    
-#     return merged_inventory
-
 def preprocess_quota(quota: pd.DataFrame) -> pd.DataFrame:
     """
     Normalizing the quota table; process the quota table to only have SKU and Quota columns
@@ -158,22 +144,9 @@ def preprocess_quota(quota: pd.DataFrame) -> pd.DataFrame:
     quota["Quota Amount"] = quota["Quota Amount"].fillna(0)
     return quota[["SKU", "Quota", "Quota Amount"]]
 
-
-# def preprocess_smc(smc: pd.DataFrame, sku: pd.DataFrame) -> pd.DataFrame:
-#     # rename the columns ItemCode to SKU and Available to AVAILABLE
-#     smc.rename(columns={"ItemCode": "SKU", "Available": "AVAILABLE"}, inplace=True)
-#     smc["WAREHOUSEID"] = "SMC"
-#     merged_inventory = pd.merge(smc, sku[['SKU', 'UPC', 'Collection']], on='SKU', how='left')
-#     merged_inventory["UPC"] = merged_inventory["UPC"].astype(str)
-#     merged_inventory["UPC"] = merged_inventory["UPC"].apply(lambda x: x.split(".")[0])
-#     merged_inventory.rename(columns={"UPC": "UPCCODE"}, inplace=True)
-
-#     return merged_inventory[["SKU", "AVAILABLE", "UPCCODE", "WAREHOUSEID", "Collection"]]
-
 def merge_tables(
         bergenInventoryNJ_preprocessed: pd.DataFrame,
-        tplCenter_preprocessed: pd.DataFrame,
-        thinkLogistics: pd.DataFrame
+        tplCenter_preprocessed: pd.DataFrame
 ) -> pd.DataFrame:
     """ Create Model Input Table
     
@@ -187,12 +160,10 @@ def merge_tables(
     
     # set upccodeof tplCenter_preprocessed to str
     tplCenter_preprocessed["UPCCODE"] = tplCenter_preprocessed["UPCCODE"].astype(str)
-    thinkLogistics["UPCCODE"] = thinkLogistics["UPCCODE"].astype(str)
     
     merged = pd.concat([
         bergenInventoryNJ_preprocessed,
         tplCenter_preprocessed,
-        thinkLogistics
     ])
    
     # change upc to str
@@ -241,7 +212,6 @@ def metrics(merged_data_: pd.DataFrame, retailQuot: pd.DataFrame, all_SKU_shopif
     merged_data["Updated_BLNJ"] = merged_data.apply(lambda x: x["BLNJ"] - x["Quota Amount"] if x["Warehouse"] == "BLNJ" else x["BLNJ"], axis=1)
     merged_data["Updated_3PLC NJ"] = merged_data.apply(lambda x: x["3PLC NJ"] - x["Quota Amount"] if x["Warehouse"] == "3PLC NJ" else x["3PLC NJ"], axis=1)
     merged_data["Updated_3PLC LA"] = merged_data.apply(lambda x: x["3PLC LA"] - x["Quota Amount"] if x["Warehouse"] == "3PLC LA" else x["3PLC LA"], axis=1)
-    merged_data["Updated_THINKLOGISTICS"] = merged_data.apply(lambda x: x["THINKLOGISTICS"] - x["Quota Amount"] if x["Warehouse"] == "THINKLOGISTICS" else x["THINKLOGISTICS"], axis=1)
     
       
     merged_data = pd.merge(merged_data, all_SKU_shopify, on="SKU", how="outer")
@@ -250,8 +220,8 @@ def metrics(merged_data_: pd.DataFrame, retailQuot: pd.DataFrame, all_SKU_shopif
     merged_data['UPC'] = merged_data[['UPCCODE_x', 'UPCCODE_y']].apply(lambda row: row.dropna().iloc[0], axis=1)
     merged_data.drop(['UPCCODE_x', 'UPCCODE_y'], axis=1, inplace=True)
     
-    merged_data["Total Inventory"] =merged_data["BLNJ"] + merged_data["3PLC NJ"] + merged_data["3PLC LA"] + merged_data["THINKLOGISTICS"]
-    merged_data["Total Available"] =merged_data["Updated_3PLC NJ"] + merged_data["Updated_BLNJ"]  + merged_data["Updated_3PLC LA"] + merged_data["THINKLOGISTICS"]
+    merged_data["Total Inventory"] = merged_data["BLNJ"] + merged_data["3PLC NJ"] + merged_data["3PLC LA"]
+    merged_data["Total Available"] = merged_data["Updated_3PLC NJ"] + merged_data["Updated_BLNJ"]  + merged_data["Updated_3PLC LA"]
     
 
     merged_data.fillna(0, inplace=True)
@@ -264,7 +234,7 @@ def experiment_metrics(metrics_table: pd.DataFrame):
     return metrics_table[["Product Description", "Total Inventory"]].set_index("Product Description").to_dict()["Total Inventory"]
 
 
-def add_product_name_SKU(merged_data: pd.DataFrame, skus: pd.DataFrame, retialPrice: pd.DataFrame) -> pd.DataFrame:
+def add_product_name_SKU(merged_data: pd.DataFrame, skus: pd.DataFrame, retailPrice: pd.DataFrame) -> pd.DataFrame:
     """Add the product name to the merged_data dataframe
     Args:
         merged_data : merged_data
@@ -276,9 +246,9 @@ def add_product_name_SKU(merged_data: pd.DataFrame, skus: pd.DataFrame, retialPr
     """
     skus = skus[["SKU", "Product Description", "Collection", "Color", "Size (Inch)", "Weight (lbs)"]]
     merged_data = pd.merge(merged_data, skus, on="SKU", how="left")
-    merged_data = pd.merge(merged_data, retialPrice, on="SKU", how="left") 
+    merged_data = pd.merge(merged_data, retailPrice, on="SKU", how="left")
     merged_data.fillna(0, inplace=True)
-    return merged_data[["SKU", "UPC","Color", "Size (Inch)", "Weight (lbs)", "Product Description","Collection", "BLNJ", "3PLC LA","3PLC NJ","THINKLOGISTICS",  "Quota", "Total Inventory", "Quota Amount", "Warehouse", "Updated_BLNJ", "Updated_3PLC LA","Updated_3PLC NJ","Updated_THINKLOGISTICS",  "Total Available", "Cost"]]
+    return merged_data[["SKU", "UPC","Color", "Size (Inch)", "Weight (lbs)", "Product Description","Collection", "BLNJ", "3PLC LA","3PLC NJ", "Quota", "Total Inventory", "Quota Amount", "Warehouse", "Updated_BLNJ", "Updated_3PLC LA","Updated_3PLC NJ",  "Total Available", "Cost"]]
 
 def total_inventory(final_SKU_table: pd.DataFrame) -> pd.DataFrame:
     # deep copy the final_SKU_table

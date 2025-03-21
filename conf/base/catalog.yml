@@ -23,25 +23,15 @@ tplCenter:
   filepath: data/01_raw/InventoryReportTPLC.csv
   layer: raw
 
-inventoryTL:
-  type: pandas.CSVDataSet
-  filepath: data/01_raw/InventoryReportTL.csv
-  layer: raw
-
 retailQuota:
   type: pandas.ExcelDataSet
   filepath: data/01_raw/static/quota.xlsx
   layer: raw
   
-retialPrice:
+retailPrice:
   type: pandas.CSVDataSet
   filepath: data/01_raw/static/Bearaby_US_Historic_Costs.csv
   layer: raw
-
-thinkLogistics_preprocessed:
-  type: pandas.CSVDataSet
-  filepath: data/02_intermediate/preprocessed_thinkLogistics.csv
-  layer: preprocessing
 
 bergenInventoryNJ_preprocessed:
   type: pandas.ParquetDataSet
