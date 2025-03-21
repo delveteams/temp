@@ -25,7 +25,6 @@ from .customClasses.ThinkLogisticsAPI import ThinkLogisticsAPI
 from .customClasses._3PLCenterAPI import _3PLCenterAPI
 from .customClasses.GoogleSheetUpdater import GoogleSheetUpdater
 
-
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/drive']
     
@@ -36,22 +35,22 @@ class APIAccessHooks:
     def after_catalog_created(  ) -> None:
         logging.info("Downloading inventory data from the Bergen API...")
         # Loop through credentials and fetch/write data
-        credentials_list = [(
-            os.getenv("USER_NJ_EMAIL"),
-            os.getenv("USER_NJ_USERNAME"),
-            os.getenv("USER_NJ_PASSWORD"),
-            "/BergenInventoryNJ.csv"
-        ), (
-            os.getenv("USER_PA_EMAIL"),
-            os.getenv("USER_PA_USERNAME"),
-            os.getenv("USER_PA_PASSWORD"),
-            "/BergenInventoryPA.csv"
-        )]
+
+        credentials_list = [
+            (
+                os.getenv("USER_NJ_EMAIL"),
+                os.getenv("USER_NJ_USERNAME"),
+                os.getenv("USER_NJ_PASSWORD"),
+                "/BergenInventoryNJ.csv"
+            ),
+        ]
         for creds in credentials_list:
             web_address, username, password, file_name = creds
             rex_api = BergenAPI(web_address, username, password)
             authentication_token = rex_api.get_authentication_token()
 
+            if not authentication_token:
+                print("Authentication token is missing. Please authenticate first.")
             if authentication_token:
                 logging.info("Authentication token:", authentication_token)
                 inventory = rex_api.get_inventory()
@@ -88,12 +87,9 @@ class APIAccessHooks:
             "BergenInventoryNJ",
             os.getenv("SHEETS_ID_BERGEN_NJ")
         ), (
-            project_url + r"/data/01_raw/BergenInventoryPA.csv",
-            "BergenInventoryPA",
-            os.getenv("SHEETS_ID_BERGEN_PA")
-        ), (
             project_url + r"/data/03_primary/final_SKU_table.xlsx",
-            "",os.getenv("SHEETS_ID_DAILY_INVENTORY")
+            "",
+            os.getenv("SHEETS_ID_DAILY_INVENTORY")
         ), (
             project_url + r"/data/01_raw/InventoryReportTPLC.csv",
             "3PLCenter",
@@ -123,8 +119,6 @@ class APIAccessHooks:
                 # Save the credentials for the next run
                 with open('token.json', 'w') as token:
                     token.write(creds.to_json())
-
-            
             try:
                 service = build('drive', 'v3', credentials=creds)
 
@@ -157,8 +151,6 @@ class APIAccessHooks:
                     }
                     
                     media = MediaFileUpload(filename_path, mimetype='text/csv')
-                    # uploaded_file = service.files().create(
-                    # body=csv_file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
     
                 # Check if the file with the same name already exists in the folder
                 existing_file = None

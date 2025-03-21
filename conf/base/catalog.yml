@@ -18,11 +18,6 @@ bergenInventoryNJ:
   filepath: data/01_raw/BergenInventoryNJ.csv
   layer: raw
 
-bergenInventoryPA: 
-  type: pandas.CSVDataSet
-  filepath: data/01_raw/BergenInventoryPA.csv
-  layer: raw
-
 tplCenter:
   type: pandas.CSVDataSet
   filepath: data/01_raw/InventoryReportTPLC.csv
@@ -51,11 +46,6 @@ thinkLogistics_preprocessed:
 bergenInventoryNJ_preprocessed:
   type: pandas.ParquetDataSet
   filepath: data/02_intermediate/preprocessed_bergenInventoryNJ.pq
-  layer: preprocessing
-
-bergenInventoryPA_preprocessed:
-  type: pandas.CSVDataSet
-  filepath: data/02_intermediate/preprocessed_bergenInventoryPA.csv
   layer: preprocessing
 
 tplCenter_preprocessed:

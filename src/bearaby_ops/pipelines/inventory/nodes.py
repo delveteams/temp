@@ -170,13 +170,17 @@ def preprocess_quota(quota: pd.DataFrame) -> pd.DataFrame:
 
 #     return merged_inventory[["SKU", "AVAILABLE", "UPCCODE", "WAREHOUSEID", "Collection"]]
 
-
-def merge_tables(inventoryNJ_preprocessed:pd.DataFrame, tplCenter_preprocessed: pd.DataFrame, thinkLogistics: pd.DataFrame) -> pd.DataFrame:
+def merge_tables(
+        bergenInventoryNJ_preprocessed: pd.DataFrame,
+        tplCenter_preprocessed: pd.DataFrame,
+        thinkLogistics: pd.DataFrame
+) -> pd.DataFrame:
     """ Create Model Input Table
     
     Args:
-        inventoryNJ_preprocessed: Bergen County Inventory Data
+        bergenInventoryNJ_preprocessed: Bergen County Inventory Data
         tplCenter_preprocessed: Bergen County Inventory Data
+        thinkLogistics:
     Returns:
         
     """
@@ -185,7 +189,11 @@ def merge_tables(inventoryNJ_preprocessed:pd.DataFrame, tplCenter_preprocessed: 
     tplCenter_preprocessed["UPCCODE"] = tplCenter_preprocessed["UPCCODE"].astype(str)
     thinkLogistics["UPCCODE"] = thinkLogistics["UPCCODE"].astype(str)
     
-    merged = pd.concat([inventoryNJ_preprocessed, tplCenter_preprocessed, thinkLogistics])
+    merged = pd.concat([
+        bergenInventoryNJ_preprocessed,
+        tplCenter_preprocessed,
+        thinkLogistics
+    ])
    
     # change upc to str
     merged["UPCCODE"] = merged["UPCCODE"].astype(str)

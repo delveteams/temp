@@ -1,7 +1,11 @@
-from kedro.pipeline import Pipeline, pipeline, node
+from kedro.pipeline import Pipeline, node, pipeline
 
-from .nodes import  preprocess_TL, total_inventory, add_product_name_SKU, quota_barplot, stacked_barplot, barplot_of_available_inventory_per_warehouse, preprocess_bergenInventory_products, preprocess_tplCenter, merge_tables, preprocess_quota, metrics, experiment_metrics, preprocess_sku
-# SKU_NJ_barplot, SKU_PA_barplot, SKU_TPLC_barplot, 
+from .nodes import add_product_name_SKU, barplot_of_available_inventory_per_warehouse, experiment_metrics, \
+    merge_tables, metrics, preprocess_TL, preprocess_bergenInventory_products, preprocess_quota, preprocess_sku, \
+    preprocess_tplCenter, quota_barplot, stacked_barplot, total_inventory
+
+
+# SKU_NJ_barplot, SKU_PA_barplot, SKU_TPLC_barplot,
 def create_pipeline(**kwargs) -> Pipeline:
     return pipeline([
         node(
@@ -10,13 +14,6 @@ def create_pipeline(**kwargs) -> Pipeline:
             outputs="bergenInventoryNJ_preprocessed",
             name="preprocess_bergenInventoryNJ_node",
         ),
-        node(
-            func=preprocess_bergenInventory_products,
-            inputs=["bergenInventoryPA"],
-            outputs="bergenInventoryPA_preprocessed",
-            name="preprocess_bergenInventoryPA_node",
-        )
-        ,
         node(
             func=preprocess_tplCenter,
             inputs=["tplCenter", "SKUs_preprocessed"],
@@ -46,7 +43,7 @@ def create_pipeline(**kwargs) -> Pipeline:
         ),
         node(
             func=merge_tables,
-            inputs=["bergenInventoryNJ_preprocessed", "bergenInventoryPA_preprocessed", "tplCenter_preprocessed","thinkLogistics_preprocessed"],
+            inputs=["bergenInventoryNJ_preprocessed", "tplCenter_preprocessed", "thinkLogistics_preprocessed"],
             outputs="merged_table",
             name="merge_table_node",
         ),

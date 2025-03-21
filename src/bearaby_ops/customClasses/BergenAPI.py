@@ -1,11 +1,10 @@
-import datetime
-import pandas as pd
-import requests
 import csv
-import requests
 import xml.etree.ElementTree as ET
 from urllib.parse import quote_plus
- 
+
+import requests
+
+
 class BergenAPI:
     """Class to interact with the Rex API and fetch inventory data."""
     
@@ -32,6 +31,9 @@ class BergenAPI:
             response.raise_for_status()
             root = ET.fromstring(response.text)
             self.authentication_token = root.text
+            if not self.authentication_token:
+                print("Authentication failed. Please check your credentials.")
+                return None
             return self.authentication_token
         except requests.exceptions.RequestException as e:
             print("An error occurred during authentication:", e)
@@ -89,9 +91,8 @@ class BergenAPI:
                 actual_quantity = item.find('ns:ActualQuantity', namespace).text
                 pending_quantity = item.find('ns:PendingQuantity', namespace).text
                 available = int(actual_quantity) - int(pending_quantity)
-               
 
-                if (actual_quantity == '0' and pending_quantity == '0'):
+                if actual_quantity == '0' and pending_quantity == '0':
                     continue
 
                 csv_writer.writerow([
@@ -100,4 +101,3 @@ class BergenAPI:
               
 
         print(f'CSV data has been written to {csv_filename}')
-        
